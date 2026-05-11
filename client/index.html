@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,7 +27,7 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%),
                 radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
             color: var(--text-main);
@@ -54,6 +55,7 @@
             font-weight: 700;
             background: linear-gradient(to right, #a8c0ff, #3f2b96);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.5px;
         }
@@ -85,9 +87,20 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
         }
 
         main {
@@ -117,9 +130,18 @@
         }
 
         /* Scrollbar styling */
-        .chat-container::-webkit-scrollbar { width: 6px; }
-        .chat-container::-webkit-scrollbar-track { background: transparent; }
-        .chat-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
 
         .message {
             max-width: 80%;
@@ -133,8 +155,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .message.user {
@@ -168,7 +197,9 @@
             border-radius: 4px;
         }
 
-        .metadata .highlight { color: var(--secondary); }
+        .metadata .highlight {
+            color: var(--secondary);
+        }
 
         .input-area {
             display: flex;
@@ -191,7 +222,9 @@
             outline: none;
         }
 
-        input::placeholder { color: var(--text-muted); }
+        input::placeholder {
+            color: var(--text-muted);
+        }
 
         button {
             background: var(--primary);
@@ -209,7 +242,7 @@
             background: #4338ca;
             box-shadow: 0 0 15px var(--primary-glow);
         }
-        
+
         button:disabled {
             background: #374151;
             cursor: not-allowed;
@@ -234,15 +267,29 @@
             animation: bounce 1.4s infinite ease-in-out both;
         }
 
-        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-indicator span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
 
         @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
         }
     </style>
 </head>
+
 <body>
 
     <header>
@@ -258,7 +305,7 @@
             <div class="message system">
                 👋 Welcome! Streaming, RAG Retrieval, and Fault-Tolerance have been enabled! Try asking a question.
             </div>
-            
+
             <div class="typing-indicator" id="typing">
                 <span></span><span></span><span></span>
             </div>
@@ -272,7 +319,7 @@
 
     <script>
         const SCHEDULER_URL = 'http://localhost:9000';
-        
+
         const chat = document.getElementById('chat');
         const form = document.getElementById('prompt-form');
         const input = document.getElementById('prompt-input');
@@ -320,16 +367,16 @@
         function createMessageElement(isUser) {
             const div = document.createElement('div');
             div.className = `message ${isUser ? 'user' : 'system'}`;
-            
+
             const contentDiv = document.createElement('div');
             contentDiv.className = 'content';
             div.appendChild(contentDiv);
-            
+
             chat.insertBefore(div, typing);
             chat.scrollTop = chat.scrollHeight;
             return { wrapper: div, content: contentDiv };
         }
-        
+
         function appendMetadata(wrapper, metadata) {
             const metaHtml = `
                 <div class="metadata">
@@ -343,18 +390,18 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const query = input.value.trim();
             if (!query) return;
 
             // UI updates
             input.value = '';
             btn.disabled = true;
-            
+
             // Add user message
             const userMsg = createMessageElement(true);
             userMsg.content.innerHTML = formatText(query);
-            
+
             typing.style.display = 'flex';
             chat.scrollTop = chat.scrollHeight;
 
@@ -375,7 +422,7 @@
                 // Streaming logic
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
-                
+
                 const sysMsg = createMessageElement(false);
                 let fullText = "";
                 let buffer = "";
@@ -383,13 +430,13 @@
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
-                    
+
                     buffer += decoder.decode(value, { stream: true });
                     const lines = buffer.split('\n');
-                    
+
                     // Keep the last incomplete piece in the buffer
                     buffer = lines.pop();
-                    
+
                     for (const line of lines) {
                         if (!line.trim()) continue;
                         try {
@@ -401,7 +448,7 @@
                             } else if (data.metadata) {
                                 appendMetadata(sysMsg.wrapper, data.metadata);
                             }
-                        } catch(e) {
+                        } catch (e) {
                             console.error("Stream parsing error:", e, line);
                         }
                     }
@@ -418,4 +465,5 @@
         });
     </script>
 </body>
+
 </html>
