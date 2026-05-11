@@ -12,8 +12,6 @@ from monitoring.metrics import MetricsCollector
 from client.load_generator import run_load_test, run_scaled_load_tests
 from rag.ingestor import ingest_documents, is_db_populated
 from fault_tolerance.failure_test import run_failure_simulation_test
-# UPDATED LINE BELOW: Aliasing the import to match the rest of the script
-from client.strategy_comparison import main as run_strategy_comparison
 
 async def wait_for_workers(worker_urls, timeout=30):
     print(f"\n[Main] Waiting for {len(worker_urls)} workers to come online...")
@@ -60,7 +58,7 @@ async def main_async():
         return
 
     # ── 3. Load balancer ───────────────────────────────────────────
-    lb = LoadBalancer(worker_urls, strategy="round_robin") # Network mode uses round_robin
+    lb = LoadBalancer(worker_urls, strategy="round_robin") # Default starting strategy
 
     # ── 4. Scheduler ───────────────────────────────────────────────
     scheduler = Scheduler(lb)
@@ -76,14 +74,45 @@ async def main_async():
     # ── 7. Tests Dispatcher ───────────────────────────────────────
     if FAILURE_TEST:
         await run_failure_simulation_test(scheduler, worker_urls, lb, monitor, metrics)
+        
     elif STRATEGY_COMPARISON_TEST:
-        # We don't await run_strategy_comparison since it's synchronous external tool, but we can to_thread it
-        await asyncio.to_thread(run_strategy_comparison, scheduler, lb, worker_urls, MetricsCollector, num_users=500)
+        print("\n" + "="*60)
+        print(" 🔥 STARTING INTERNAL STRATEGY COMPARISON 🔥 ")
+        print("="*60)
+
+        results = []
+        # Test 1: Round Robin
+        print("\n[Test 1/2] Running with Round Robin...")
+        lb.strategy = "round_robin"
+        rr_metrics = MetricsCollector()
+        rr_metrics.register_workers(worker_urls)
+        await run_load_test(scheduler, rr_metrics, num_users=500)
+        results.append(("Round Robin", rr_metrics.get_summary()))
+
+        # Test 2: Load-Aware
+        print("\n[Test 2/2] Running with Load-Aware Routing...")
+        lb.strategy = "load_aware"
+        la_metrics = MetricsCollector()
+        la_metrics.register_workers(worker_urls)
+        await run_load_test(scheduler, la_metrics, num_users=500)
+        results.append(("Load-Aware", la_metrics.get_summary()))
+
+        # Print the Final Comparison Table for your report
+        print("\n" + "+" + "-"*65 + "+")
+        print(f"| {'STRATEGY COMPARISON RESULTS (500 Users)':^63} |")
+        print("+" + "-"*20 + "+" + "-"*10 + "+" + "-"*10 + "+" + "-"*10 + "+" + "-"*11 + "+")
+        print(f"| {'Strategy':<18} | {'Avg ms':>8} | {'P95 ms':>8} | {'Req/s':>8} | {'Failed':>9} |")
+        print("+" + "-"*20 + "+" + "-"*10 + "+" + "-"*10 + "+" + "-"*10 + "+" + "-"*11 + "+")
+        for name, summary in results:
+            print(f"| {name:<18} | {summary['avg_latency_ms']:>8.0f} | {summary['p95_latency_ms']:>8.0f} | {summary['throughput_rps']:>8.1f} | {summary['failed']:>9} |")
+        print("+" + "-"*20 + "+" + "-"*10 + "+" + "-"*10 + "+" + "-"*10 + "+" + "-"*11 + "+")
+        
     elif MULTI_SCALE_TEST:
         await run_scaled_load_tests(scheduler, MetricsCollector, scales=[100, 250, 500, 750, 1000])
         print("\n[Main] Multi-Scale Load Test Complete.")
+        
     else:
-        # Existing single load test
+        # Existing single load test / fault tolerance demo
         async def inject_fault():
             await asyncio.sleep(10)      # wait 10s into the load test
             if len(worker_urls) > 1:
@@ -103,13 +132,7 @@ async def main_async():
 
         await run_load_test(scheduler, metrics, num_users=NUM_USERS)
         
-        # In async, we must fetch stats asynchronously before printing
-        metrics_summary = metrics.get_summary() # Local method
-        # Worker stats are updated async via HTTP inside get_stats or inside metrics
-        # But wait, metrics.py's print_report tries to fetch stats synchronously via requests.get
-        # I need to update metrics.py print_report to be async.
-
-        # Let's call the updated async print_report. I will update metrics.py next.
+        metrics_summary = metrics.get_summary() 
         await metrics.print_report()
 
     await monitor.stop()

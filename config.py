@@ -34,4 +34,4 @@ THREAD_POOL_SIZE     = 100
 # Testing Modes
 MULTI_SCALE_TEST         = False
 FAILURE_TEST             = False
-STRATEGY_COMPARISON_TEST = False
+STRATEGY_COMPARISON_TEST = True

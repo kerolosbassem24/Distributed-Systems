@@ -24,7 +24,7 @@ class GPUWorker:
         self.id          = worker_id if worker_id is not None else gpu_id
         self.gpu_id      = gpu_id
         self.mock_mode   = mock_mode
-        self.device      = f"cuda:{gpu_id}" if not mock_mode else "cpu"
+        self.device      = f"cuda:{gpu_id}" if not mock_mode else "cpu" 
         self.status      = "active"          # "active" | "failed" | "recovering"
         self.active_requests  = 0
         self.total_processed  = 0

@@ -47,20 +47,14 @@ class Scheduler:
         print(f"[Scheduler] Reassigning {len(tasks)} tasks from failed worker {worker_url}")
         for task in tasks:
             task.retry_count += 1
-            # In a true distributed system we'd enqueue these again
-            # For this test, we fire and forget the re-handle as a background task
             asyncio.create_task(self.handle_request(task))
 
     async def get_stats(self) -> dict:
         active_urls = self.lb.get_active_workers()
         gpu_stats = []
         
-        # Concurrently fetch stats from all active workers
         async def fetch_stat(url):
             try:
-                # We can reuse the load balancer's client or use a temporary one
-                # Since get_stats is infrequent, a temporary httpx.AsyncClient is fine,
-                # but we'll use lb.client if available.
                 resp = await self.lb.client.get(f"{url}/status", timeout=2)
                 if resp.status_code == 200:
                     data = resp.json()
