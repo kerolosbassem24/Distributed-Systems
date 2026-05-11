@@ -1,5 +1,4 @@
-import concurrent.futures
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import asyncio
 import os
 import sys
 
@@ -30,31 +29,38 @@ SAMPLE_QUERIES = [
     "What are the tradeoffs between throughput and latency?",
 ]
 
-def simulate_user(args):
-    scheduler, user_id, metrics_collector = args
+async def simulate_user(scheduler, user_id, metrics_collector):
     request  = Request(id=user_id,
                        query=SAMPLE_QUERIES[user_id % len(SAMPLE_QUERIES)])
-    response = scheduler.handle_request(request)
+    # We await the scheduler directly since this is an in-memory client
+    response = await scheduler.handle_request(request)
     metrics_collector.record(response)
     return response
 
-def run_load_test(scheduler, metrics_collector, num_users=1000):
+async def run_load_test(scheduler, metrics_collector, num_users=1000):
     print(f"\n[LoadTest] Launching {num_users} concurrent users...")
-    args = [(scheduler, i, metrics_collector) for i in range(num_users)]
+    tasks = [simulate_user(scheduler, i, metrics_collector) for i in range(num_users)]
+    
+    # Run all tasks concurrently using asyncio.gather
+    # We use a semaphore to limit concurrency if needed, but the user requested truly concurrent.
+    # We will wrap it in a semaphore just to avoid hitting OS socket limits, matching THREAD_POOL_SIZE 
+    # but since it's async we can push it higher. Let's use the requested 1000 concurrently.
+    
     completed = 0
-    with ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE) as executor:
-        futures = {executor.submit(simulate_user, a): a for a in args}
-        for future in as_completed(futures):
-            completed += 1
-            if completed % 100 == 0:
-                print(f"  Progress: {completed}/{num_users} requests completed")
+    
+    # We can use asyncio.as_completed to track progress
+    for coro in asyncio.as_completed(tasks):
+        await coro
+        completed += 1
+        if completed % 100 == 0:
+            print(f"  Progress: {completed}/{num_users} requests completed")
 
-def run_scaled_load_tests(scheduler, metrics_class_ref, scales: list):
+async def run_scaled_load_tests(scheduler, metrics_class_ref, scales: list):
     print(f"\n[LoadTest] Starting Multi-Scale Load Test: {scales}")
     results = []
     for scale in scales:
         metrics = metrics_class_ref()
-        run_load_test(scheduler, metrics, num_users=scale)
+        await run_load_test(scheduler, metrics, num_users=scale)
         summary = metrics.get_summary()
         results.append({
             "users": scale,

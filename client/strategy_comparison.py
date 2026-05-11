@@ -108,7 +108,7 @@ def run_burst(strategy_name: str, n: int = NUM_REQUESTS) -> dict:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
-def main():
+def main(*args, **kwargs):
     print("=" * 62)
     print("  LOAD BALANCING STRATEGY COMPARISON")
     print("  Scheduler:", SCHEDULER_BASE)

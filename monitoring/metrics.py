@@ -1,6 +1,7 @@
 import threading
 import time
 import numpy as np
+import httpx
 from collections import defaultdict
 import os
 import sys
@@ -18,10 +19,10 @@ class MetricsCollector:
         self.worker_stats = defaultdict(lambda: {"count": 0, "avg_latency_ms": 0.0, "gpu_id": -1, "latencies": []})
         self.strategy_distribution = defaultdict(int)
         self._lock = threading.Lock()
-        self.workers = []
+        self.worker_urls = []
 
-    def register_workers(self, workers: list):
-        self.workers = workers
+    def register_workers(self, worker_urls: list):
+        self.worker_urls = worker_urls
 
     def record(self, response: Response):
         with self._lock:
@@ -72,7 +73,7 @@ class MetricsCollector:
                 "strategy_distribution": dict(self.strategy_distribution)
             }
 
-    def print_report(self):
+    async def print_report(self):
         summary = self.get_summary()
         print("\n" + "=" * 40)
         print("|" + "DISTRIBUTED LLM SYSTEM REPORT".center(38) + "|")
@@ -93,23 +94,24 @@ class MetricsCollector:
         print("\n+-----------------------------------------+")
         print("| GPU UTILIZATION                         |")
         print("+-----------------------------------------+")
-        if not self.workers:
+        if not self.worker_urls:
             print("| No workers registered.                  |")
-        for worker in self.workers:
-            if getattr(worker, 'mock_mode', False):
-                print(f"| cuda:{worker.gpu_id}  Simulated CPU Node")
-                print("|   [mock mode — no real GPU stats available]")
-                print(f"|   Active Requests  : {worker.active_requests}")
-                print(f"|   Total Processed  : {worker.total_processed}")
-                print("|")
-            else:
+        
+        async with httpx.AsyncClient() as client:
+            for url in self.worker_urls:
                 try:
-                    util = worker.get_gpu_utilization()
-                    print(f"| cuda:{worker.gpu_id}  {util['device_name']}")
-                    print(f"|   Memory : {util['memory_used_gb']} / {util['memory_total_gb']} GB  ({util['memory_pct']}%)")
-                    print(f"|   Active Requests  : {worker.active_requests}")
-                    print(f"|   Total Processed  : {worker.total_processed}")
-                    print("|")
+                    resp = await client.get(f"{url}/status", timeout=2)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        print(f"| Worker at {url} (ID: {data.get('id')}, GPU: {data.get('gpu_id')})")
+                        print(f"|   Status           : {data.get('status')}")
+                        print(f"|   Load Score       : {data.get('load_score')}")
+                        print(f"|   Active Requests  : {data.get('active_requests')}")
+                        print(f"|   Total Processed  : {data.get('total_processed')}")
+                        print(f"|   Total Failed     : {data.get('total_failed')}")
+                        print("|")
+                    else:
+                        print(f"| Worker at {url}  Error fetching stats: {resp.status_code}")
                 except Exception as e:
-                    print(f"| cuda:{worker.gpu_id}  Error fetching stats: {e}")
+                    print(f"| Worker at {url}  Error fetching stats: {e}")
         print("+-----------------------------------------+")

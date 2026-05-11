@@ -20,8 +20,8 @@ class GPUWorker:
     loaded LLM model instance. All inference is real GPU computation.
     """
 
-    def __init__(self, gpu_id: int, mock_mode: bool = False):
-        self.id          = gpu_id
+    def __init__(self, gpu_id: int, mock_mode: bool = False, worker_id: int = None):
+        self.id          = worker_id if worker_id is not None else gpu_id
         self.gpu_id      = gpu_id
         self.mock_mode   = mock_mode
         self.device      = f"cuda:{gpu_id}" if not mock_mode else "cpu"

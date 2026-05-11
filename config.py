@@ -28,7 +28,7 @@ FAILURE_THRESHOLD    = 3        # missed heartbeats before marking dead
 MAX_RETRIES          = 3        # task reassignment retries
 
 # Load Test
-NUM_USERS            = 50
+NUM_USERS            = 100
 THREAD_POOL_SIZE     = 100
 
 # Testing Modes

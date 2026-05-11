@@ -1,0 +1,36 @@
+INFO:     Started server process [336]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+[Worker 8001] Ready in Simulated CPU Mode
+Starting worker on port 8001...
+INFO:     127.0.0.1:62882 - "GET /status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59147 - "POST /process HTTP/1.1" 200 OK
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 3519.34it/s]
+INFO:     127.0.0.1:59249 - "GET /status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59143 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59168 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59176 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59153 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59156 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59199 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59197 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59203 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59179 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59172 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59194 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59159 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59206 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59189 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59180 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59210 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59220 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59231 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59227 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59225 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59232 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59214 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59242 - "POST /process HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64037 - "GET /status HTTP/1.1" 200 OK

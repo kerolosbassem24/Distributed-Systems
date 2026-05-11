@@ -1,75 +1,82 @@
-import threading
-import time
+import asyncio
+import httpx
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import HEARTBEAT_INTERVAL, FAILURE_THRESHOLD
 
-class HealthMonitor(threading.Thread):
+class HealthMonitor:
     """
-    Background daemon thread. Actively pings worker heartbeats every
-    HEARTBEAT_INTERVAL seconds. Marks dead workers and triggers
-    task reassignment through the scheduler.
-
-    FIX: We now actively call worker.heartbeat() each cycle for workers
-    that are functioning. Previously, last_heartbeat was only updated
-    when a request was processed — so idle workers at startup were
-    incorrectly declared dead after HEARTBEAT_INTERVAL * FAILURE_THRESHOLD
-    seconds with no traffic.
+    Background daemon task. Actively pings worker endpoints via HTTP GET /status
+    every HEARTBEAT_INTERVAL seconds using asyncio and httpx.
     """
-    def __init__(self, workers, load_balancer, scheduler):
-        super().__init__(daemon=True)
-        self.workers       = workers
+    def __init__(self, worker_urls, load_balancer, scheduler):
+        self.worker_urls   = worker_urls
         self.lb            = load_balancer
         self.scheduler     = scheduler
-        self._missed_beats = {w.id: 0 for w in workers}
-        # Pre-stamp heartbeats so workers start healthy
-        for w in workers:
-            w.last_heartbeat = time.time()
+        self._missed_beats = {url: 0 for url in worker_urls}
+        self.task          = None
+        self._running      = False
+        
+        # Use a connection pool for pings
+        limits = httpx.Limits(max_keepalive_connections=10, max_connections=100)
+        self.client = httpx.AsyncClient(limits=limits, timeout=2.0)
 
-    def _ping_worker(self, worker) -> bool:
+    def start(self):
+        self._running = True
+        self.task = asyncio.create_task(self.run())
+
+    async def stop(self):
+        self._running = False
+        if self.task:
+            self.task.cancel()
+        await self.client.aclose()
+
+    async def _ping_worker(self, url: str) -> bool:
         """
-        Active health check: for in-process workers we call heartbeat()
-        directly. A worker is considered alive if it is not in a
-        failed/recovering status AND its heartbeat updates successfully.
+        Active health check via HTTP GET /status
         """
         try:
-            if worker.status == "active":
-                worker.heartbeat()   # refresh the timestamp
-                return True
+            resp = await self.client.get(f"{url}/status")
+            if resp.status_code == 200:
+                data = resp.json()
+                return data.get("status") == "active"
             return False
-        except Exception:
+        except httpx.RequestError:
             return False
 
-    def run(self):
-        while True:
-            time.sleep(HEARTBEAT_INTERVAL)
-            for worker in self.workers:
-                if worker.status == "failed":
-                    continue
+    async def run(self):
+        try:
+            while self._running:
+                await asyncio.sleep(HEARTBEAT_INTERVAL)
+                for url in self.worker_urls:
+                    alive = await self._ping_worker(url)
 
-                alive = self._ping_worker(worker)
-
-                if not alive:
-                    self._missed_beats[worker.id] += 1
-                    if self._missed_beats[worker.id] >= FAILURE_THRESHOLD:
-                        print(f"[HealthMonitor] Worker {worker.id} "
-                              f"(cuda:{worker.gpu_id}) declared DEAD")
-                        self.lb.mark_worker_failed(worker.id)
-                        self.scheduler.reassign_tasks_for_worker(worker.id)
+                    if not alive:
+                        self._missed_beats[url] += 1
+                        if self._missed_beats[url] >= FAILURE_THRESHOLD:
+                            if self.lb.worker_status.get(url) != "failed":
+                                print(f"[HealthMonitor] Worker {url} declared DEAD")
+                                self.lb.mark_worker_failed(url)
+                                await self.scheduler.reassign_tasks_for_worker(url)
+                        else:
+                            if self.lb.worker_status.get(url) != "failed":
+                                print(f"[HealthMonitor] Worker {url} missed heartbeat "
+                                      f"({self._missed_beats[url]}/{FAILURE_THRESHOLD})")
                     else:
-                        print(f"[HealthMonitor] Worker {worker.id} missed heartbeat "
-                              f"({self._missed_beats[worker.id]}/{FAILURE_THRESHOLD})")
-                else:
-                    if self._missed_beats[worker.id] > 0:
-                        print(f"[HealthMonitor] Worker {worker.id} recovered")
-                        self.lb.mark_worker_recovered(worker.id)
-                    self._missed_beats[worker.id] = 0
+                        if self._missed_beats[url] > 0:
+                            if self.lb.worker_status.get(url) == "failed":
+                                print(f"[HealthMonitor] Worker {url} recovered")
+                                self.lb.mark_worker_recovered(url)
+                        self._missed_beats[url] = 0
+        except asyncio.CancelledError:
+            pass
 
-    def inject_failure(self, worker_id: int):
-        for w in self.workers:
-            if w.id == worker_id:
-                w.simulate_failure()
-                self.lb.mark_worker_failed(worker_id)
-                self.scheduler.reassign_tasks_for_worker(worker_id)
+    async def inject_failure(self, worker_url: str):
+        try:
+            await self.client.post(f"{worker_url}/simulate_failure")
+        except:
+            pass
+        self.lb.mark_worker_failed(worker_url)
+        await self.scheduler.reassign_tasks_for_worker(worker_url)
