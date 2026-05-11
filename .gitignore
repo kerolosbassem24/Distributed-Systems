@@ -1,0 +1,29 @@
+# Virtual environment
+venv/
+.venv/
+env/
+bin/
+lib/
+include/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large data/model files
+*.zip
+*.tar.gz
+*.model
+*.bin
+*.pth
+chroma_db/
+
+# Monitoring/Output
+monitoring/data/
+output.txt
+results/
+
+# System specific
+.DS_Store
+Thumbs.db

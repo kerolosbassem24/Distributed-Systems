@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Distributed Cluster</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --glass-bg: rgba(20, 25, 40, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --primary: #4F46E5;
+            --primary-glow: rgba(79, 70, 229, 0.5);
+            --secondary: #10B981;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        header {
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #a8c0ff, #3f2b96);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .status-panel {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            box-shadow: 0 0 10px var(--secondary);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background-color: #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        main {
+            flex: 1;
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            backdrop-filter: blur(16px);
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            min-height: 0;
+        }
+
+        /* Scrollbar styling */
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-track { background: transparent; }
+        .chat-container::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 3px; }
+
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+            word-wrap: break-word;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .message.system {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .metadata {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 8px;
+        }
+
+        .metadata span {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .metadata .highlight { color: var(--secondary); }
+
+        .input-area {
+            display: flex;
+            gap: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 12px;
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            padding: 8px 12px;
+            outline: none;
+        }
+
+        input::placeholder { color: var(--text-muted); }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0 24px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background: #4338ca;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+        
+        button:disabled {
+            background: #374151;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            gap: 4px;
+        }
+
+        .typing-indicator span {
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="title">Distributed AI Cluster</div>
+        <div class="status-panel">
+            <div id="status-dot" class="status-dot offline"></div>
+            <span id="status-text">Connecting...</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="chat-container" id="chat">
+            <div class="message system">
+                👋 Welcome! Streaming, RAG Retrieval, and Fault-Tolerance have been enabled! Try asking a question.
+            </div>
+            
+            <div class="typing-indicator" id="typing">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <form class="input-area" id="prompt-form">
+            <input type="text" id="prompt-input" placeholder="Type your query here..." autocomplete="off">
+            <button type="submit" id="send-btn">Send</button>
+        </form>
+    </main>
+
+    <script>
+        const SCHEDULER_URL = 'http://localhost:9000';
+        
+        const chat = document.getElementById('chat');
+        const form = document.getElementById('prompt-form');
+        const input = document.getElementById('prompt-input');
+        const btn = document.getElementById('send-btn');
+        const typing = document.getElementById('typing');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        // Periodically check cluster status
+        async function checkStatus() {
+            try {
+                const res = await fetch(`${SCHEDULER_URL}/status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const active = data.active_workers;
+                    const inactive = data.inactive_workers || [];
+                    const strategy = data.strategy || 'round_robin';
+
+                    if (active.length > 0) {
+                        statusDot.className = 'status-dot';
+                        const workerInfo = active.map(w =>
+                            `${w.worker_id} [${w.active_requests} req, ${w.latency_ms}ms]`
+                        ).join(' | ');
+                        statusText.textContent = `${active.length} Worker(s) Online | ${strategy} | ${workerInfo}`;
+                    } else {
+                        statusDot.className = 'status-dot offline';
+                        statusText.textContent = inactive.length > 0
+                            ? `${inactive.length} Worker(s) Offline`
+                            : `No Workers Available`;
+                    }
+                }
+            } catch (err) {
+                statusDot.className = 'status-dot offline';
+                statusText.textContent = `Scheduler Offline`;
+            }
+        }
+
+        setInterval(checkStatus, 5000);
+        checkStatus();
+
+        function formatText(text) {
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        }
+
+        function createMessageElement(isUser) {
+            const div = document.createElement('div');
+            div.className = `message ${isUser ? 'user' : 'system'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'content';
+            div.appendChild(contentDiv);
+            
+            chat.insertBefore(div, typing);
+            chat.scrollTop = chat.scrollHeight;
+            return { wrapper: div, content: contentDiv };
+        }
+        
+        function appendMetadata(wrapper, metadata) {
+            const metaHtml = `
+                <div class="metadata">
+                    <span>Worker: <span class="highlight">${metadata.worker_id}</span></span>
+                    <span>Latency: <span class="highlight">${metadata.latency_ms.toFixed(2)} ms</span></span>
+                </div>
+            `;
+            wrapper.innerHTML += metaHtml;
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const query = input.value.trim();
+            if (!query) return;
+
+            // UI updates
+            input.value = '';
+            btn.disabled = true;
+            
+            // Add user message
+            const userMsg = createMessageElement(true);
+            userMsg.content.innerHTML = formatText(query);
+            
+            typing.style.display = 'flex';
+            chat.scrollTop = chat.scrollHeight;
+
+            try {
+                const response = await fetch(`${SCHEDULER_URL}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                typing.style.display = 'none';
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Error ${response.status}: ${errText}`);
+                }
+
+                // Streaming logic
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                
+                const sysMsg = createMessageElement(false);
+                let fullText = "";
+                let buffer = "";
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    
+                    // Keep the last incomplete piece in the buffer
+                    buffer = lines.pop();
+                    
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.chunk) {
+                                fullText += data.chunk;
+                                sysMsg.content.innerHTML = formatText(fullText);
+                                chat.scrollTop = chat.scrollHeight;
+                            } else if (data.metadata) {
+                                appendMetadata(sysMsg.wrapper, data.metadata);
+                            }
+                        } catch(e) {
+                            console.error("Stream parsing error:", e, line);
+                        }
+                    }
+                }
+
+            } catch (err) {
+                typing.style.display = 'none';
+                const sysMsg = createMessageElement(false);
+                sysMsg.content.innerHTML = `❌ Request failed: ${err.message}`;
+            } finally {
+                btn.disabled = false;
+                input.focus();
+            }
+        });
+    </script>
+</body>
+</html>

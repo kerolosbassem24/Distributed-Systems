@@ -1,0 +1,11 @@
+Large Language Models Overview
+
+Large Language Models (LLMs) are a class of artificial intelligence models that are trained to understand and generate human-like text. At their core, modern LLMs are based on the Transformer architecture, which was introduced by Google researchers in the 2017 paper "Attention Is All You Need".
+
+The key innovation of the Transformer is the self-attention mechanism. Attention allows the model to weigh the importance of different words in a sentence when processing it, enabling it to capture long-range dependencies and context much better than previous architectures like Recurrent Neural Networks (RNNs). In multi-head attention, the model computes several attention distributions simultaneously, allowing it to focus on different aspects of the input sequence.
+
+Inference optimization is crucial for deploying LLMs in production. Given their massive size (often billions or hundreds of billions of parameters), running these models requires significant computational resources and memory bandwidth.
+
+Quantization is a common optimization technique. It involves reducing the precision of the model's weights and activations from, for example, 32-bit floating-point (FP32) to 16-bit (FP16), 8-bit (INT8), or even 4-bit formats. This significantly reduces the memory footprint and can accelerate computation on hardware that supports lower precision operations, with often minimal impact on the model's accuracy.
+
+The KV (Key-Value) cache is another critical optimization for text generation. During autoregressive generation, where the model generates one token at a time, it needs to attend to all previously generated tokens. Instead of recomputing the key and value representations for all past tokens at every step, these representations are cached. This avoids redundant computations and drastically speeds up the generation process.

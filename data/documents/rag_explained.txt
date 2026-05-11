@@ -1,0 +1,13 @@
+Retrieval-Augmented Generation (RAG)
+
+Retrieval-Augmented Generation (RAG) is a technique that enhances the capabilities of Large Language Models (LLMs) by grounding their responses in external knowledge sources. While LLMs are powerful, their knowledge is limited to what they were trained on, and they can hallucinate (generate plausible but incorrect information). RAG addresses this by retrieving relevant context from a knowledge base and providing it to the LLM along with the user's query.
+
+The process typically starts with document ingestion. Documents are broken down into smaller, manageable pieces through various chunking strategies. These strategies might involve splitting text by a fixed number of characters or words, with some overlap (to maintain context across chunk boundaries), or splitting based on logical document structures like paragraphs or sections.
+
+Once chunked, each piece of text is converted into a vector embedding using an embedding model (like those from the sentence-transformers library). An embedding is a high-dimensional vector representation of the text's semantic meaning.
+
+These embeddings are then stored in a Vector Database, such as ChromaDB. A vector database is optimized for storing and querying these high-dimensional vectors.
+
+When a user submits a query, the same embedding model is used to generate a vector for the query. The system then performs a similarity search in the vector database to find the text chunks whose embeddings are closest (most similar) to the query's embedding. Common similarity metrics include cosine similarity or Euclidean distance.
+
+The retrieved chunks represent the most relevant context. This context is then concatenated with the original query to form a new prompt for the LLM. By providing the LLM with this specific context, the model can generate a much more accurate, informative, and verifiable response. Retrieval ranking can also be applied to further sort the retrieved chunks based on relevance before feeding them to the model.

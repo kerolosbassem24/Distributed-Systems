@@ -1,0 +1,13 @@
+Fault Tolerance in Distributed Systems
+
+Fault tolerance is the property that enables a system to continue operating properly in the event of the failure of some of its components. In large-scale distributed computing environments, hardware failures, network partitions, and software bugs are inevitable. A robust system must be designed to anticipate and gracefully handle these issues.
+
+A fundamental mechanism for detecting failures is the heartbeat protocol. In a master-worker architecture, workers periodically send a "heartbeat" signal to the master or a health monitoring service. If the monitor does not receive a heartbeat from a specific worker within a predefined timeout period, it considers that worker to be dead or disconnected.
+
+Once a failure is detected, the system must perform failover. Failover is the process of automatically switching to a redundant or standby system upon the failure of the primary system. In a task processing cluster, this might involve the scheduler identifying the tasks that were assigned to the failed worker and reassigning them to other available, healthy workers in the pool.
+
+Replication is a key strategy for ensuring data availability and durability. By maintaining multiple copies of data or state across different nodes, the system ensures that the loss of one node does not result in the permanent loss of data.
+
+Checkpointing is another important concept, especially for long-running computational tasks like training deep learning models. The system periodically saves the current state (e.g., model weights) to persistent storage. If a node fails, the computation can be restarted from the last saved checkpoint rather than from the beginning, saving significant time and resources.
+
+In modern containerized deployments, orchestration platforms like Kubernetes handle much of the fault tolerance at the infrastructure level. For instance, if a Kubernetes pod (which might be hosting a worker node) crashes, the control plane will detect the failure and automatically start a new pod to replace it, thereby maintaining the desired state of the system.

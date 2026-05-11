@@ -1,0 +1,14 @@
+Distributed Systems and Load Balancing
+
+A distributed system consists of multiple software components that are on multiple computers, but run as a single system. Load balancing is a core concept here. It refers to the process of distributing a set of tasks over a set of resources, with the aim of making their overall processing more efficient. Load balancing techniques can optimize the response time and avoid unevenly overloading some compute nodes while other compute nodes are left idle.
+
+In terms of strategies, there are several common approaches:
+1. Round Robin: Distributes requests sequentially across the cluster. It's simple but doesn't account for the current load of each node.
+2. Least Connections: Sends requests to the server with the fewest active connections. It's better for long-lived connections.
+3. Load Aware: A more complex strategy that considers multiple factors such as CPU usage, memory pressure, and historical response times to make a decision.
+
+The CAP theorem is a fundamental principle in distributed systems. It states that a distributed data store can only simultaneously provide two out of three guarantees: Consistency (every read receives the most recent write or an error), Availability (every request receives a non-error response, without the guarantee that it contains the most recent write), and Partition tolerance (the system continues to operate despite an arbitrary number of messages being dropped or delayed by the network between nodes).
+
+To achieve consistency in distributed systems, protocols like Paxos and Raft are used. They help a cluster of nodes agree on a series of values, ensuring that even if some nodes fail, the system as a whole can reach a consensus.
+
+Sharding is another crucial concept. It involves horizontally partitioning data across multiple databases or nodes. This allows for distributing the data and the load, making it easier to scale out a database.
